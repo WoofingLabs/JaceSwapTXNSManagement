@@ -124,7 +124,8 @@
                 errorMessage: ": ",
                 allProcessed: "All wallets processed. Done!",
                 generalError: "Error: ",
-                suggestedGasPrice: "Suggested Gas Price: "
+                suggestedGasPrice: "Suggested Gas Price: ",
+                invalidAmount: "Error: OKB amount too large (max 1000 OKB)."
             },
             zh: {
                 title: "JaceSwap 交易管理",
@@ -173,7 +174,8 @@
                 errorMessage: ": ",
                 allProcessed: "所有钱包处理完成。完成!",
                 generalError: "错误: ",
-                suggestedGasPrice: "建议 Gas 价格: "
+                suggestedGasPrice: "建议 Gas 价格: ",
+                invalidAmount: "错误: OKB 数量过大 (最大 1000 OKB)。"
             }
         };
 
@@ -253,7 +255,10 @@
                 }
 
                 const okbAmount = getRandomAmount(amountMin, amountMax);
-                const okbWei = web3.utils.toWei(okbAmount.toFixed(18).toString(), "ether");
+                // Ensure the amount is a valid string for toWei, removing trailing decimals and zeros
+                const okbAmountStr = Number(okbAmount.toFixed(18)).toString();
+                const okbWei = web3.utils.toWei(okbAmountStr, "ether");
+                console.log("Generated OKB amount:", okbAmount, "Converted to Wei:", okbWei);
 
                 if (web3.utils.toBN(balance).lt(web3.utils.toBN(okbWei).add(web3.utils.toBN(reserveOKB)))) {
                     status.textContent += getMessage("lowBalanceWarning") + account.address + getMessage("hasLowBalance") + balanceInOKB + getMessage("mayNotCoverGas") + "\n";
@@ -275,7 +280,7 @@
                     const tx = await txData.send({
                         from: account.address,
                         value: okbWei,
-                        gas: Math.min(gasLimit, estimatedGas * 1.2),
+                        gas: Math.min(gasLimit, Math.floor(estimatedGas * 1.2)),
                         gasPrice: gasPriceWei
                     });
                     status.textContent += getMessage("purchaseSuccess") + tx.transactionHash + "\n";
@@ -316,6 +321,10 @@
             }
             if (isNaN(amountMin) || isNaN(amountMax) || amountMin <= 0 || amountMax < amountMin) {
                 status.textContent += getMessage("invalidAmountRange") + "\n";
+                return;
+            }
+            if (amountMin > 1000 || amountMax > 1000) {
+                status.textContent += getMessage("invalidAmount") + "\n";
                 return;
             }
             if (isNaN(gasPriceGwei) || gasPriceGwei <= 0) {
